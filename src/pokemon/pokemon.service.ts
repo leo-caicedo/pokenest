@@ -1,13 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePokemonDto } from './dto/create-pokemon.dto';
-import { UpdatePokemonDto } from './dto/update-pokemon.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Pokemon } from './entities/pokemon.entity';
 
+import { UpdatePokemonDto } from './dto/update-pokemon.dto';
+import { CreatePokemonDto } from './dto/create-pokemon.dto';
 @Injectable()
 export class PokemonService {
-  create(createPokemonDto: CreatePokemonDto) {
-    createPokemonDto.name = createPokemonDto.name.toLocaleLowerCase()
 
-    return createPokemonDto
+  // Solo en el constructor se hace la inyeccion de dependencias
+  constructor(
+    @InjectModel(Pokemon.name)
+    private readonly pokemonModel: Model<Pokemon>
+  ) {}
+
+  async create(createPokemonDto: CreatePokemonDto) {
+    createPokemonDto.name = createPokemonDto.name.toLocaleLowerCase()
+    const pokemon = await this.pokemonModel.create(createPokemonDto)
+
+    return pokemon
   }
 
   findAll() {
