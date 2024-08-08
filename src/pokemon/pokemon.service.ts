@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { isValidObjectId, Model } from 'mongoose';
 import { Pokemon } from './entities/pokemon.entity';
 
 import { UpdatePokemonDto } from './dto/update-pokemon.dto';
@@ -15,18 +15,44 @@ export class PokemonService {
   ) {}
 
   async create(createPokemonDto: CreatePokemonDto) {
-    createPokemonDto.name = createPokemonDto.name.toLocaleLowerCase()
-    const pokemon = await this.pokemonModel.create(createPokemonDto)
+    try {
+      createPokemonDto.name = createPokemonDto.name.toLocaleLowerCase()
+      const pokemon = await this.pokemonModel.create(createPokemonDto)
+  
+      return pokemon
+    } catch (error) {
+      if (error.code === 11000) {
+        throw new BadRequestException(`Pokemon already exists ${JSON.stringify(error.keyValue)}`)
+      }
+      console.log(error)
 
-    return pokemon
+      throw new InternalServerErrorException("Can't create new pokemon - check server logs")
+    }
   }
 
   findAll() {
     return `This action returns all pokemon`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} pokemon`;
+  async findOne(term: string) {
+    let pokemon: Pokemon
+
+    if (!isNaN(+term)) {
+      pokemon = await this.pokemonModel.findOne({no: term})
+    }
+
+    if (!pokemon && isValidObjectId(term)) {
+      pokemon = await this.pokemonModel.findById(term)
+    }
+
+    if (!pokemon) {
+      pokemon = await this.pokemonModel.findOne({name: term})
+    }
+
+    if (!pokemon)
+      throw new NotFoundException('Pokemon not found')
+
+    return pokemon;
   }
 
   update(id: number, updatePokemonDto: UpdatePokemonDto) {
